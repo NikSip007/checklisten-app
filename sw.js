@@ -1,11 +1,11 @@
-// Service Worker für Checklisten App
+/ Service Worker für Checklisten App (GitHub Pages Version)
 const CACHE_NAME = 'checklist-app-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/checklisten-app/',
+  '/checklisten-app/index.html',
+  '/checklisten-app/manifest.json',
+  '/checklisten-app/icon-192.png',
+  '/checklisten-app/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
 ];
 
@@ -53,7 +53,7 @@ self.addEventListener('fetch', function(event) {
           }
         ).catch(function() {
           // Offline-Fallback
-          return caches.match('/index.html');
+          return caches.match('/checklisten-app/index.html');
         });
       })
   );
