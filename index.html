@@ -1,1 +1,2039 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Checklisten">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/checklisten-app/manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/checklisten-app/icon-192.png">
+    
+    <title>Checklisten App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            touch-action: manipulation;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .app-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        .login-screen {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 400px;
+            margin: 100px auto;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .task-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .task-card:active {
+            transform: scale(0.98);
+        }
+
+        .task-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .task-card.completed {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            opacity: 0.8;
+        }
+
+        .task-card.selected {
+            border: 2px solid #667eea;
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .task-card.overdue {
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+            border: 2px solid #fc8181;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .task-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .task-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .task-icons {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #64748b;
+        }
+
+        .input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .temp-device {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+
+        .temp-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .temp-slider {
+            width: 150px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .temp-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .temp-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .temp-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .temp-unit {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .action-bar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .fifo-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #856404;
+        }
+
+        .storage-warning {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #c33;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .admin-controls {
+                flex-wrap: wrap;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .login-screen {
+                margin: 50px auto;
+                padding: 30px 20px;
+            }
+        }
+
+        @supports (-webkit-touch-callout: none) {
+            input[type="number"] {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="login-screen">
+            <div class="app-icon">✓</div>
+            <h1 style="margin: 20px 0 10px 0;">Checklisten App</h1>
+            <p style="color: #666; margin-bottom: 30px;">Bitte melden Sie sich mit Ihrem Code an</p>
+            <input type="tel" id="loginCode" class="input" placeholder="4-stelliger Code" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+            <button onclick="login()" class="btn btn-primary" style="width: 100%;">Anmelden</button>
+        </div>
+
+        <!-- Main App -->
+        <div id="mainApp" class="hidden">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-content">
+                    <div class="app-title">
+                        <div class="app-icon">✓</div>
+                        <div>
+                            <h1>Checklisten App</h1>
+                            <p id="welcomeMessage" style="color: #666;">Willkommen</p>
+                        </div>
+                    </div>
+                    <div class="admin-controls">
+                        <button id="userManagerBtn" class="nav-btn hidden" onclick="toggleUserManager()" title="Mitarbeiter verwalten">👥</button>
+                        <button id="taskManagerBtn" class="nav-btn hidden" onclick="toggleTaskManager()" title="Aufgaben verwalten">⚙️</button>
+                        <button id="deviceManagerBtn" class="nav-btn hidden" onclick="toggleDeviceManager()" title="Temperaturgeräte verwalten">🌡️</button>
+                        <button id="statsBtn" class="nav-btn hidden" onclick="toggleStats()" title="Statistiken">📊</button>
+                        <button onclick="logout()" class="nav-btn" style="color: #e53e3e;">Abmelden</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div id="actionBar" class="action-bar hidden">
+                <span id="selectedCount">0 Aufgabe(n) ausgewählt</span>
+                <div>
+                    <button onclick="clearSelection()" class="btn btn-secondary">Abbrechen</button>
+                    <button onclick="confirmTasks()" class="btn btn-success">Als erledigt markieren</button>
+                </div>
+            </div>
+
+            <!-- User Manager -->
+            <div id="userManager" class="section hidden">
+                <div class="section-title">
+                    👥 Mitarbeiter verwalten
+                    <button onclick="showAddUserDialog()" class="btn btn-primary" style="margin-left: auto;">+ Neuer Mitarbeiter</button>
+                </div>
+                
+                <!-- Email Settings -->
+                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 20px;">📧</span>
+                            <div>
+                                <h3>Administrator E-Mail</h3>
+                                <p style="font-size: 14px; color: #666;">Für Berichte und Benachrichtigungen</p>
+                            </div>
+                        </div>
+                        <div id="emailDisplay">
+                            <span id="emailValue" style="background: white; padding: 8px 12px; border-radius: 8px; margin-right: 10px;">admin@company.com</span>
+                            <button onclick="editEmail()" class="nav-btn">✏️</button>
+                        </div>
+                        <div id="emailEdit" class="hidden">
+                            <input type="email" id="emailInput" class="input" style="width: 200px; margin: 0 5px 0 0;">
+                            <button onclick="saveEmail()" class="btn btn-success" style="padding: 8px;">✓</button>
+                            <button onclick="cancelEmailEdit()" class="btn btn-secondary" style="padding: 8px;">✗</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="userList" class="task-grid"></div>
+            </div>
+
+            <!-- Task Manager -->
+            <div id="taskManager" class="section hidden">
+                <div class="section-title">
+                    ⚙️ Aufgaben verwalten
+                    <button onclick="showAddTaskDialog()" class="btn btn-primary" style="margin-left: auto;">+ Neue Aufgabe</button>
+                </div>
+                <div id="adminTaskList"></div>
+            </div>
+
+            <!-- Device Manager -->
+            <div id="deviceManager" class="section hidden">
+                <div class="section-title">
+                    🌡️ Temperaturgeräte verwalten
+                    <button onclick="showAddDeviceDialog()" class="btn btn-primary" style="margin-left: auto;">+ Neues Gerät</button>
+                </div>
+                <div id="deviceList" class="task-grid"></div>
+            </div>
+
+            <!-- Statistics -->
+            <div id="statistics" class="section hidden">
+                <div class="section-title">
+                    📊 Statistiken
+                    <button onclick="resetStats()" class="btn btn-danger" style="margin-left: auto;">Zurücksetzen</button>
+                </div>
+                <div id="statsList" class="task-grid"></div>
+            </div>
+
+            <!-- Task Sections -->
+            <div id="taskSections">
+                <!-- Daily Tasks -->
+                <div class="section">
+                    <div class="section-title">
+                        📅 Tägliche Aufgaben
+                    </div>
+                    <div id="dailyTasks" class="task-grid"></div>
+                </div>
+
+                <!-- Weekly Tasks -->
+                <div class="section">
+                    <div class="section-title">
+                        📗 Wöchentliche Aufgaben
+                    </div>
+                    <div id="weeklyTasks" class="task-grid"></div>
+                </div>
+
+                <!-- Monthly Tasks -->
+                <div class="section">
+                    <div class="section-title">
+                        📕 Monatliche Aufgaben
+                    </div>
+                    <div id="monthlyTasks" class="task-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Confirm Dialog -->
+    <div id="confirmModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Aufgaben bestätigen</h3>
+            <p>Bitte geben Sie Ihren Code ein, um <span id="confirmCount">0</span> Aufgabe(n) als erledigt zu markieren.</p>
+            <input type="tel" id="confirmCode" class="input" placeholder="Ihr 4-stelliger Code" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeConfirmModal()" class="btn btn-secondary" style="flex: 1;">Abbrechen</button>
+                <button onclick="executeConfirmTasks()" class="btn btn-success" style="flex: 1;">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Temperature Dialog -->
+    <div id="tempModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3>Temperaturmessung</h3>
+                <button onclick="closeTempModal()" style="border: none; background: none; font-size: 20px; cursor: pointer;">✗</button>
+            </div>
+            <div id="tempDevices"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeTempModal()" class="btn btn-secondary" style="flex: 1;">Abbrechen</button>
+                <button onclick="saveTemperatures()" class="btn btn-primary" style="flex: 1;">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Dialog -->
+    <div id="addUserModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="userModalTitle">Neuen Mitarbeiter erstellen</h3>
+                <button onclick="closeAddUserModal()" style="border: none; background: none; font-size: 20px; cursor: pointer;">✗</button>
+            </div>
+            <input type="text" id="userName" class="input" placeholder="Name">
+            <input type="tel" id="userCode" class="input" placeholder="4-stelliger Code" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <input type="checkbox" id="userAdmin">
+                Administrator-Rechte gewähren</label><label style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;"><input type="checkbox" id="userSupervisor">Supervisor-Rechte gewähren
+            </label>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeAddUserModal()" class="btn btn-secondary" style="flex: 1;">Abbrechen</button>
+                <button onclick="saveUser()" class="btn btn-primary" style="flex: 1;" id="saveUserBtn">Erstellen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Dialog -->
+    <div id="addTaskModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="taskModalTitle">Neue Aufgabe erstellen</h3>
+                <button onclick="closeAddTaskModal()" style="border: none; background: none; font-size: 20px; cursor: pointer;">✗</button>
+            </div>
+            <input type="text" id="taskTitle" class="input" placeholder="Titel">
+            <textarea id="taskDescription" class="input" placeholder="Beschreibung" rows="3"></textarea>
+            <select id="taskCategory" class="input">
+                <option value="daily">Täglich</option>
+                <option value="weekly">Wöchentlich</option>
+                <option value="monthly">Monatlich</option>
+            </select>
+            <select id="taskSpecial" class="input">
+                <option value="">Normal</option>
+                <option value="temperature">Temperaturmessung</option>
+            </select>
+            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <input type="checkbox" id="taskFifo">
+                FIFO-Warnung anzeigen
+            </label>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeAddTaskModal()" class="btn btn-secondary" style="flex: 1;">Abbrechen</button>
+                <button onclick="saveTask()" class="btn btn-primary" style="flex: 1;" id="saveTaskBtn">Erstellen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Device Dialog -->
+    <div id="addDeviceModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="deviceModalTitle">Neues Temperaturgerät erstellen</h3>
+                <button onclick="closeAddDeviceModal()" style="border: none; background: none; font-size: 20px; cursor: pointer;">✗</button>
+            </div>
+            <input type="text" id="deviceName" class="input" placeholder="Gerätename (z.B. Kühlschrank, Küche)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="number" id="deviceMinTemp" class="input" placeholder="Min. Temperatur (°C)" step="1">
+                <input type="number" id="deviceMaxTemp" class="input" placeholder="Max. Temperatur (°C)" step="1">
+            </div>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: #333;">💡 Hinweise:</div>
+                <div style="font-size: 14px; color: #666;">
+                    • Tiefkühlgeräte: -25°C bis -15°C<br>
+                    • Kühlgeräte: 2°C bis 7°C<br>
+                    • Name sollte eindeutig und aussagekräftig sein
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeAddDeviceModal()" class="btn btn-secondary" style="flex: 1;">Abbrechen</button>
+                <button onclick="saveDevice()" class="btn btn-primary" style="flex: 1;" id="saveDeviceBtn">Erstellen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/checklisten-app/sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful');
+                }, function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+        // App State - In-Memory Storage
+        let appData = {
+            currentUser: null,
+            selectedTasks: [],
+            editingUser: null,
+            editingTask: null,
+            editingDevice: null,
+            currentView: 'tasks',
+            users: [
+                { id: 1, name: 'Max Mustermann', code: '1234', isAdmin: true },
+                { id: 2, name: 'Anna Schmidt', code: '5678', isAdmin: false },
+                { id: 3, name: 'Peter Weber', code: '9999', isAdmin: false }
+            ],
+            adminEmail: 'admin@company.com',
+            tasks: {
+                daily: [
+                    { id: 'temp_morning', title: 'Temperaturmessung am Morgen', description: 'Temperatur aller Kühl- und Gefriergeräte messen', completed: false, completedBy: null, completedAt: null, special: 'temperature', order: 0 },
+                    { id: 'temp_afternoon', title: 'Temperaturmessung am Nachmittag', description: 'Temperatur aller Kühl- und Gefriergeräte messen', completed: false, completedBy: null, completedAt: null, special: 'temperature', order: 1 },
+                    { id: 'tk_auffuellen', title: 'TK-Truhe auffüllen', description: 'Tiefkühltruhe mit neuen Produkten auffüllen', completed: false, fifo: true, order: 2 },
+                    { id: 'automaten_auffuellen', title: 'Automaten auffüllen', description: 'Alle Verkaufsautomaten mit Produkten auffüllen', completed: false, fifo: true, order: 3 },
+                    { id: 'regale_auffuellen', title: 'Regale auffüllen', description: 'Verkaufsregale mit Produkten auffüllen', completed: false, fifo: true, order: 4 },
+                    { id: 'getraenke_ks_auffuellen', title: 'Getränke-Kühlschrank auffüllen', description: 'Getränkekühlschrank mit neuen Getränken auffüllen', completed: false, fifo: true, order: 5 },
+                    { id: 'getraenke_regal_auffuellen', title: 'Getränke-Regal auffüllen', description: 'Getränkeregal mit neuen Getränken auffüllen', completed: false, fifo: true, order: 6 },
+                    { id: 'getraenkeschubladen', title: 'Getränkeschubladen auffüllen', description: 'Getränkeschubladen mit neuen Getränken auffüllen', completed: false, fifo: true, order: 7 },
+                    { id: 'leberkaese_reinigen', title: 'Leberkäsewärmer reinigen', description: 'Leberkäsewärmer gründlich reinigen und desinfizieren', completed: false, order: 8 },
+                    { id: 'bain_marie', title: 'Bain-Marie sauber machen', description: 'Bain-Marie gründlich reinigen und desinfizieren', completed: false, order: 9 },
+                    { id: 'merry_chef', title: 'Merry Chef reinigen', description: 'Merry Chef Ofen gründlich reinigen', completed: false, order: 10 },
+                    { id: 'backofen_reinigen', title: 'Backöfen reinigen', description: 'Alle Backöfen gründlich reinigen', completed: false, order: 11 },
+                    { id: 'bistro_theke', title: 'Bistro-Kühltheke aufräumen und säubern', description: 'Bistro-Kühltheke komplett aufräumen und säubern', completed: false, order: 12 },
+                    { id: 'mikrowelle', title: 'Mikrowelle reinigen', description: 'Mikrowelle innen und außen gründlich reinigen', completed: false, order: 13 },
+                    { id: 'kaffeemaschine', title: 'Kaffeemaschine durchspülen', description: 'Kaffeemaschine durchspülen und reinigen', completed: false, order: 14 },
+                    { id: 'spuelmaschine', title: 'Spülmaschine reinigen', description: 'Spülmaschine gründlich reinigen und entkalken', completed: false, order: 15 },
+                    { id: 'geraete_abschalten', title: 'Alle Geräte abschalten', description: 'Alle nicht dauerhaft benötigten Geräte abschalten', completed: false, order: 16 }
+                ],
+                weekly: [
+                    { id: 'automaten_grundreinigung', title: 'Grundreinigung der Automaten', description: 'Komplette Grundreinigung aller Verkaufsautomaten', completed: false, order: 0 },
+                    { id: 'getraenke_schubladen_theke', title: 'Getränke-Kühlschubladen Theke säubern', description: 'Getränke-Kühlschubladen an der Theke gründlich säubern', completed: false, order: 1 }
+                ],
+                monthly: [
+                    { id: 'tk_truhe_keller_reinigen', title: 'TK-Truhe im Keller reinigen', description: 'Tiefkühltruhe im Keller komplett reinigen und abtauen', completed: false, order: 0 },
+                    { id: 'tk_schrank_keller_reinigen', title: 'TK-Schrank im Keller reinigen', description: 'Tiefkühlschrank im Keller komplett reinigen und abtauen', completed: false, order: 1 },
+                    { id: 'warenlager_reinigen', title: 'Warenlager reinigen', description: 'Komplettes Warenlager gründlich reinigen und aufräumen', completed: false, order: 2 },
+                    { id: 'warenlager_mhd', title: 'Warenlager MHD-Prüfung', description: 'Alle Produkte im Warenlager auf Mindesthaltbarkeitsdatum prüfen', completed: false, order: 3 }
+                ]
+            },
+            temperatureDevices: [
+                { id: 'tk_keller', name: 'Tiefkühltruhe, Keller', minTemp: -25, maxTemp: -15 },
+                { id: 'tks_keller', name: 'Tiefkühlschrank, Keller', minTemp: -25, maxTemp: -15 },
+                { id: 'tks_kueche', name: 'Tiefkühlschrank, Küche', minTemp: -25, maxTemp: -15 },
+                { id: 'ks_kueche', name: 'Kühlschrank, Küche', minTemp: 2, maxTemp: 7 },
+                { id: 'tks_eis', name: 'Tiefkühlschrank, Eis', minTemp: -25, maxTemp: -15 },
+                { id: 'kz_bistro', name: 'Kühlzelle Bistro-Kühltheke', minTemp: 2, maxTemp: 7 }
+            ],
+            completionStats: {}
+        };
+
+        // Try to load from localStorage if available (for local use)
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('checklistApp');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    Object.assign(appData, data);
+                    
+                    // Ensure compatibility with old data structure
+                    Object.keys(appData.completionStats).forEach(userId => {
+                        if (!appData.completionStats[userId].tasks) {
+                            appData.completionStats[userId].tasks = {};
+                        }
+                    });
+                    
+                    // Reset current session data
+                    appData.currentUser = null;
+                    appData.selectedTasks = [];
+                    appData.editingUser = null;
+                    appData.editingTask = null;
+                    appData.editingDevice = null;
+                    appData.currentView = 'tasks';
+                    return true;
+                }
+            } catch (e) {
+                console.log('LocalStorage not available or error loading data');
+            }
+            return false;
+        }
+
+        // Save to localStorage if available
+        function saveToLocalStorage() {
+            try {
+                const dataToSave = {
+                    users: appData.users,
+                    adminEmail: appData.adminEmail,
+                    tasks: appData.tasks,
+                    temperatureDevices: appData.temperatureDevices,
+                    completionStats: appData.completionStats
+                };
+                localStorage.setItem('checklistApp', JSON.stringify(dataToSave));
+                return true;
+            } catch (e) {
+                console.log('LocalStorage not available');
+                return false;
+            }
+        }
+
+        // Manual PDF Export
+        function exportCompletedTasksPDF() {
+            const hasCompletedTasks = ['daily', 'weekly', 'monthly'].some(cat => 
+                appData.tasks[cat].some(t => t.completed)
+            );
+            
+            if (!hasCompletedTasks) {
+                alert('Keine erledigten Aufgaben vorhanden!');
+                return;
+            }
+            
+            generateCompletedTasksPDF();
+        }
+
+        // Export/Import Functions
+        function exportData() {
+            const dataToExport = {
+                users: appData.users,
+                adminEmail: appData.adminEmail,
+                tasks: appData.tasks,
+                temperatureDevices: appData.temperatureDevices,
+                completionStats: appData.completionStats,
+                exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `checklist_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert('Daten erfolgreich exportiert!');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    
+                    if (imported.users) appData.users = imported.users;
+                    if (imported.adminEmail) appData.adminEmail = imported.adminEmail;
+                    if (imported.tasks) appData.tasks = imported.tasks;
+                    if (imported.temperatureDevices) appData.temperatureDevices = imported.temperatureDevices;
+                    if (imported.completionStats) {
+                        appData.completionStats = imported.completionStats;
+                        // Ensure compatibility with old data
+                        Object.keys(appData.completionStats).forEach(userId => {
+                            if (!appData.completionStats[userId].tasks) {
+                                appData.completionStats[userId].tasks = {};
+                            }
+                        });
+                    }
+                    
+                    saveToLocalStorage();
+                    renderTasks();
+                    alert('Daten erfolgreich importiert!');
+                } catch (error) {
+                    alert('Fehler beim Importieren der Daten!');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // PDF Generation
+        function generateCompletedTasksPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(102, 126, 234);
+            doc.text('Checklisten App - Erledigte Aufgaben', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text(`Mitarbeiter: ${appData.currentUser.name}`, 20, 30);
+            doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, 36);
+            doc.text(`Uhrzeit: ${new Date().toLocaleTimeString('de-DE')}`, 20, 42);
+            
+            let yPosition = 55;
+            
+            // Helper function to add section
+            function addSection(title, tasks, category) {
+                const completedTasks = tasks.filter(t => t.completed);
+                if (completedTasks.length === 0) return;
+                
+                // Check if we need a new page
+                if (yPosition > 250) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                // Section title
+                doc.setFontSize(16);
+                doc.setTextColor(51, 51, 51);
+                doc.text(title, 20, yPosition);
+                yPosition += 10;
+                
+                // Tasks
+                doc.setFontSize(11);
+                completedTasks.forEach(task => {
+                    // Check if we need a new page
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    // Task box
+                    doc.setDrawColor(40, 167, 69);
+                    doc.setFillColor(248, 249, 250);
+                    
+                    // Calculate box height based on content
+                    let boxHeight = 20;
+                    if (task.temperatureReadings) {
+                        boxHeight += Object.keys(task.temperatureReadings).length * 6;
+                    }
+                    
+                    doc.roundedRect(20, yPosition - 5, 170, boxHeight, 3, 3, 'F');
+                    
+                    // Checkmark
+                    doc.setTextColor(40, 167, 69);
+                    doc.text('✓', 25, yPosition + 3);
+                    
+                    // Task title
+                    doc.setTextColor(51, 51, 51);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(task.title, 35, yPosition + 3);
+                    
+                    // Completed info
+                    doc.setFont(undefined, 'normal');
+                    doc.setFontSize(9);
+                    doc.setTextColor(120);
+                    const completedInfo = `${task.completedBy} - ${new Date(task.completedAt).toLocaleString('de-DE')}`;
+                    doc.text(completedInfo, 35, yPosition + 9);
+                    
+                    // Temperature readings if available
+                    if (task.temperatureReadings) {
+                        doc.setFontSize(9);
+                        doc.setTextColor(80);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Temperaturen:', 35, yPosition + 15);
+                        doc.setFont(undefined, 'normal');
+                        
+                        let tempY = yPosition + 21;
+                        Object.entries(task.temperatureReadings).forEach(([device, value]) => {
+                            doc.text(`• ${device}: ${value}`, 40, tempY);
+                            tempY += 6;
+                        });
+                    }
+                    
+                    yPosition += boxHeight + 5;
+                });
+                
+                yPosition += 10;
+            }
+            
+            // Add all sections
+            addSection('📅 Tägliche Aufgaben', appData.tasks.daily, 'daily');
+            addSection('📗 Wöchentliche Aufgaben', appData.tasks.weekly, 'weekly');
+            addSection('📕 Monatliche Aufgaben', appData.tasks.monthly, 'monthly');
+            
+            // Statistics
+            if (yPosition > 220) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(51, 51, 51);
+            doc.text('Zusammenfassung', 20, yPosition);
+            yPosition += 10;
+            
+            const stats = appData.completionStats[appData.currentUser.id] || { daily: 0, weekly: 0, monthly: 0, tasks: {} };
+            const totalCompleted = ['daily', 'weekly', 'monthly'].reduce((sum, cat) => 
+                sum + appData.tasks[cat].filter(t => t.completed).length, 0
+            );
+            
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Heute erledigte Aufgaben: ${totalCompleted}`, 20, yPosition);
+            yPosition += 6;
+            doc.text(`Gesamt erledigte Aufgaben (Historie): ${stats.daily + stats.weekly + stats.monthly}`, 20, yPosition);
+            
+            // Footer - position dynamically
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setFontSize(9);
+            doc.setTextColor(150);
+            doc.text('Dieses Dokument wurde automatisch generiert', 105, pageHeight - 10, { align: 'center' });
+            
+            // Save PDF
+            const filename = `Checkliste_${appData.currentUser.name.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save("Temperaturprotokoll_2025-06-10.pdf");
+            
+            // Show brief notification
+            const notification = document.createElement('div');
+            notification.textContent = `✅ PDF "${filename}" wurde gespeichert`;
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #48bb78;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-weight: 600;
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Login Functions
+        function login() {
+            const code = document.getElementById('loginCode').value;
+            const user = appData.users.find(u => u.code === code);
+            
+            if (user) {
+                appData.currentUser = user;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('welcomeMessage').textContent = `Willkommen, ${user.name}`;
+                
+                if (user.isAdmin) {
+                    document.getElementById('userManagerBtn').classList.remove('hidden');
+                    document.getElementById('taskManagerBtn').classList.remove('hidden');
+                    document.getElementById('deviceManagerBtn').classList.remove('hidden');
+                    document.getElementById('statsBtn').classList.remove('hidden');
+                }
+                
+                renderTasks();
+            } else {
+                alert('Ungültiger Code!');
+            }
+        }
+
+        function logout() {
+            // Check if there are completed tasks
+            const hasCompletedTasks = ['daily', 'weekly', 'monthly'].some(cat => 
+                appData.tasks[cat].some(t => t.completed)
+            );
+            
+            if (hasCompletedTasks) {
+                // Automatically generate PDF for completed tasks
+                generateCompletedTasksPDF();
+                
+                // Automatically reset daily tasks for next day
+                appData.tasks.daily.forEach(task => {
+                    task.completed = false;
+                    task.completedBy = null;
+                    task.completedAt = null;
+                    delete task.temperatureReadings;
+                    delete task.tempReadings;
+                });
+                saveToLocalStorage();
+            }
+            
+            appData.currentUser = null;
+            appData.selectedTasks = [];
+            appData.currentView = 'tasks';
+            appData.editingUser = null;
+            appData.editingTask = null;
+            appData.editingDevice = null;
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginCode').value = '';
+            hideAllManagers();
+        }
+
+        // Navigation Functions
+        function hideAllManagers() {
+            document.getElementById('userManager').classList.add('hidden');
+            document.getElementById('taskManager').classList.add('hidden');
+            document.getElementById('deviceManager').classList.add('hidden');
+            document.getElementById('statistics').classList.add('hidden');
+            document.getElementById('taskSections').classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        }
+
+        function toggleUserManager() {
+            hideAllManagers();
+            if (appData.currentView !== 'users') {
+                document.getElementById('userManager').classList.remove('hidden');
+                document.getElementById('taskSections').classList.add('hidden');
+                document.getElementById('userManagerBtn').classList.add('active');
+                appData.currentView = 'users';
+                renderUsers();
+            } else {
+                appData.currentView = 'tasks';
+                renderTasks();
+            }
+        }
+
+        function toggleTaskManager() {
+            hideAllManagers();
+            if (appData.currentView !== 'taskAdmin') {
+                document.getElementById('taskManager').classList.remove('hidden');
+                document.getElementById('taskSections').classList.add('hidden');
+                document.getElementById('taskManagerBtn').classList.add('active');
+                appData.currentView = 'taskAdmin';
+                renderAdminTasks();
+            } else {
+                appData.currentView = 'tasks';
+                renderTasks();
+            }
+        }
+
+        function toggleDeviceManager() {
+            hideAllManagers();
+            if (appData.currentView !== 'devices') {
+                document.getElementById('deviceManager').classList.remove('hidden');
+                document.getElementById('taskSections').classList.add('hidden');
+                document.getElementById('deviceManagerBtn').classList.add('active');
+                appData.currentView = 'devices';
+                renderDevices();
+            } else {
+                appData.currentView = 'tasks';
+                renderTasks();
+            }
+        }
+
+        function toggleStats() {
+            hideAllManagers();
+            if (appData.currentView !== 'stats') {
+                document.getElementById('statistics').classList.remove('hidden');
+                document.getElementById('taskSections').classList.add('hidden');
+                document.getElementById('statsBtn').classList.add('active');
+                appData.currentView = 'stats';
+                renderStats();
+            } else {
+                appData.currentView = 'tasks';
+                renderTasks();
+            }
+        }
+
+        // Task Functions
+        function renderTasks() {
+            renderTaskSection('daily', 'dailyTasks');
+            renderTaskSection('weekly', 'weeklyTasks');
+            renderTaskSection('monthly', 'monthlyTasks');
+            updateActionBar();
+        }
+
+        function renderTaskSection(category, containerId) {
+            const container = document.getElementById(containerId);
+            
+            // Sort tasks by order property (if not set, use index), then by completion status
+            const sortedTasks = [...appData.tasks[category]]
+                .sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : 999;
+                    const orderB = b.order !== undefined ? b.order : 999;
+                    return orderA - orderB;
+                })
+                .sort((a, b) => {
+                    if (a.completed && !b.completed) return 1;
+                    if (!a.completed && b.completed) return -1;
+                    return 0;
+                });
+
+            container.innerHTML = sortedTasks.map(task => {
+                const isSelected = appData.selectedTasks.includes(`${category}-${task.id}`);
+                const taskClasses = [
+                    'task-card',
+                    task.completed ? 'completed' : '',
+                    isSelected ? 'selected' : '',
+                    task.overdue ? 'overdue' : ''
+                ].filter(Boolean).join(' ');
+
+                return `
+                    <div class="${taskClasses}" onclick="selectTask('${category}', '${task.id}')">
+                        <div class="task-icons">
+                            ${task.special === 'temperature' ? '🌡️' : ''}
+                            ${task.overdue ? '⚠️' : ''}
+                            ${isSelected ? '✓' : ''}
+                        </div>
+                        <div class="task-title">${task.title}</div>
+                        ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                        ${task.completedBy ? `<div class="task-meta">✓ ${task.completedBy} - ${new Date(task.completedAt).toLocaleString()}</div>` : ''}
+                        ${task.temperatureReadings ? `
+                            <div style="background: #f8f9fa; padding: 8px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
+                                <div style="font-weight: 600; margin-bottom: 4px;">🌡️ Temperaturen:</div>
+                                ${Object.entries(task.temperatureReadings).map(([device, value]) => 
+                                    `<div style="color: #666;">• ${device}: ${value}</div>`
+                                ).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectTask(category, taskId) {
+            const task = appData.tasks[category].find(t => t.id === taskId);
+            if (task.completed) return;
+
+            if (task.special === 'temperature') {
+                showTemperatureDialog(taskId);
+                return;
+            }
+
+            if (task.fifo) {
+                alert('HINWEIS: First In First Out beachten!');
+            }
+
+            const taskKey = `${category}-${taskId}`;
+            const index = appData.selectedTasks.indexOf(taskKey);
+            
+            if (index > -1) {
+                appData.selectedTasks.splice(index, 1);
+            } else {
+                appData.selectedTasks.push(taskKey);
+            }
+            
+            renderTasks();
+        }
+
+        function clearSelection() {
+            appData.selectedTasks = [];
+            renderTasks();
+        }
+
+        function confirmTasks() {
+            if (appData.selectedTasks.length === 0) return;
+            
+            document.getElementById('confirmCount').textContent = appData.selectedTasks.length;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            document.getElementById('confirmCode').value = '';
+        }
+
+        function executeConfirmTasks() {
+            const code = document.getElementById('confirmCode').value;
+            
+            if (code === appData.currentUser.code) {
+                const now = new Date();
+                
+                appData.selectedTasks.forEach(taskKey => {
+                    const [category, ...taskIdParts] = taskKey.split('-');
+                    const taskId = taskIdParts.join('-');
+                    const task = appData.tasks[category].find(t => t.id === taskId);
+                    if (task) {
+                        task.completed = true;
+                        task.completedBy = appData.currentUser.name;
+                        task.completedAt = now;
+                        
+                        // Transfer temperature readings if available
+                        if (task.tempReadings) {
+                            task.temperatureReadings = task.tempReadings;
+                            delete task.tempReadings; // Clean up temporary field
+                        }
+                        
+                        // Initialize user stats if not exists
+                        if (!appData.completionStats[appData.currentUser.id]) {
+                            appData.completionStats[appData.currentUser.id] = { 
+                                daily: 0, 
+                                weekly: 0, 
+                                monthly: 0,
+                                tasks: {}
+                            };
+                        }
+                        
+                        // Update category count
+                        appData.completionStats[appData.currentUser.id][category]++;
+                        
+                        // Update individual task count
+                        const taskKey = `${category}_${taskId}`;
+                        if (!appData.completionStats[appData.currentUser.id].tasks[taskKey]) {
+                            appData.completionStats[appData.currentUser.id].tasks[taskKey] = {
+                                title: task.title,
+                                category: category,
+                                count: 0
+                            };
+                        }
+                        appData.completionStats[appData.currentUser.id].tasks[taskKey].count++;
+                    }
+                });
+                
+                appData.selectedTasks = [];
+                saveToLocalStorage();
+                renderTasks();
+                closeConfirmModal();
+            } else {
+                alert('Ungültiger Code!');
+            }
+        }
+
+        function updateActionBar() {
+            const actionBar = document.getElementById('actionBar');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            if (appData.selectedTasks.length > 0) {
+                actionBar.classList.remove('hidden');
+                selectedCount.textContent = `${appData.selectedTasks.length} Aufgabe(n) ausgewählt`;
+            } else {
+                actionBar.classList.add('hidden');
+            }
+        }
+
+        // Temperature Functions
+        function showTemperatureDialog(taskId) {
+            const container = document.getElementById('tempDevices');
+            container.innerHTML = appData.temperatureDevices.map(device => {
+                // Calculate default temperature (middle of recommended range)
+                const defaultTemp = Math.round((device.minTemp + device.maxTemp) / 2);
+                const sliderMin = device.minTemp - 5;
+                const sliderMax = device.maxTemp + 5;
+                
+                return `
+                    <div class="temp-device">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">${device.name}</div>
+                            <div style="font-size: 12px; color: #666;">Empfohlen: ${device.minTemp}°C bis ${device.maxTemp}°C</div>
+                        </div>
+                        <div class="temp-input-container">
+                            <input type="range" 
+                                   class="temp-slider" 
+                                   min="${sliderMin}" 
+                                   max="${sliderMax}" 
+                                   value="${defaultTemp}" 
+                                   data-device="${device.id}"
+                                   data-min-temp="${device.minTemp}"
+                                   data-max-temp="${device.maxTemp}"
+                                   oninput="updateTempDisplay(this)">
+                            <div class="temp-value">
+                                <span id="temp-${device.id}">${defaultTemp}</span>
+                                <span class="temp-unit">°C</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('tempModal').classList.remove('hidden');
+            document.getElementById('tempModal').dataset.taskId = taskId;
+        }
+
+        function updateTempDisplay(slider) {
+            const deviceId = slider.dataset.device;
+            const value = slider.value;
+            document.getElementById(`temp-${deviceId}`).textContent = value;
+            
+            // Change color if outside recommended range
+            const minTemp = parseInt(slider.dataset.minTemp);
+            const maxTemp = parseInt(slider.dataset.maxTemp);
+            const tempValue = parseInt(value);
+            const display = document.getElementById(`temp-${deviceId}`).parentElement;
+            
+            if (tempValue < minTemp || tempValue > maxTemp) {
+                display.style.color = '#e53e3e';
+                display.style.fontWeight = '700';
+            } else {
+                display.style.color = '#333';
+                display.style.fontWeight = '600';
+            }
+        }
+
+        function closeTempModal() {
+            document.getElementById('tempModal').classList.add('hidden');
+        }
+
+        function saveTemperatures() {
+            const sliders = document.querySelectorAll('.temp-slider');
+            let hasError = false;
+            let errorMessage = '';
+            const temperatureReadings = {};
+            
+            sliders.forEach(slider => {
+                const deviceId = slider.dataset.device;
+                const device = appData.temperatureDevices.find(d => d.id === deviceId);
+                const temp = parseFloat(slider.value);
+                
+                // Store temperature reading
+                temperatureReadings[device.name] = `${temp}°C`;
+                
+                if (temp < device.minTemp || temp > device.maxTemp) {
+                    hasError = true;
+                    errorMessage = `Temperaturabweichung bei ${device.name}!`;
+                }
+            });
+            
+            if (hasError) {
+                const supervisorCode = prompt(errorMessage + ' Bitte Vorgesetzten kontaktieren.\nSupervisor-Code eingeben:');
+                const supervisor = appData.users.find(u => u.isSupervisor && u.code === supervisorCode);
+                if (!supervisor) {
+                    alert('Ungültiger Supervisor-Code!');
+                    return;
+                }
+            }
+            
+            alert('Temperatur erfasst und gespeichert.');
+            
+            const taskId = document.getElementById('tempModal').dataset.taskId;
+            
+            // Find the task and store temperature readings
+            const task = appData.tasks.daily.find(t => t.id === taskId);
+            if (task) {
+                // Store temperature readings in the task object
+                task.tempReadings = temperatureReadings;
+                
+                if (!task.completed) {
+                    appData.selectedTasks.push(`daily-${taskId}`);
+                }
+            }
+            
+            closeTempModal();
+            renderTasks();
+        }
+
+        // User Management Functions
+        function renderUsers() {
+            const container = document.getElementById('userList');
+            container.innerHTML = appData.users.map(user => `
+                <div class="task-card">
+                    <div class="task-icons">
+                        ${appData.currentUser.id !== user.id ? `<button onclick="deleteUser(${user.id})" style="background: none; border: none; color: #e53e3e; cursor: pointer;">✗</button>` : ''}
+                        <button onclick="editUser(${user.id})" style="background: none; border: none; color: #667eea; cursor: pointer;">✏️</button>
+                    </div>
+                    <div class="task-title">${user.name}</div>
+                    <div class="task-description">Code: ${user.code}</div>
+                    ${user.isAdmin ? '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 8px; border-radius: 20px; font-size: 12px; display: inline-block; margin-top: 5px;">Administrator</div>' : ''}
+                    <div class="task-meta">
+                        Aufgaben erledigt: ${
+                            appData.completionStats[user.id] ? 
+                            (appData.completionStats[user.id].daily || 0) + 
+                            (appData.completionStats[user.id].weekly || 0) + 
+                            (appData.completionStats[user.id].monthly || 0) :
+                            0
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddUserDialog() {
+            appData.editingUser = null;
+            document.getElementById('userModalTitle').textContent = 'Neuen Mitarbeiter erstellen';
+            document.getElementById('saveUserBtn').textContent = 'Erstellen';
+            document.getElementById('userName').value = '';
+            document.getElementById('userCode').value = '';
+            document.getElementById('userAdmin').checked = false;
+            document.getElementById('addUserModal').classList.remove('hidden');
+        }
+
+        function editUser(userId) {
+            const user = appData.users.find(u => u.id === userId);
+            if (user) {
+                appData.editingUser = user;
+                document.getElementById('userModalTitle').textContent = 'Mitarbeiter bearbeiten';
+                document.getElementById('saveUserBtn').textContent = 'Aktualisieren';
+                document.getElementById('userName').value = user.name;
+                document.getElementById('userCode').value = user.code;
+                document.getElementById('userAdmin').checked = user.isAdmin;
+                document.getElementById('addUserModal').classList.remove('hidden');
+            }
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.add('hidden');
+            appData.editingUser = null;
+        }
+
+        function saveUser() {
+            const name = document.getElementById('userName').value.trim();
+            const code = document.getElementById('userCode').value.trim();
+            const isAdmin = document.getElementById('userAdmin').checked;
+            const isSupervisor = document.getElementById('userSupervisor').checked;
+            
+            if (!name) {
+                alert('Bitte geben Sie einen Namen ein!');
+                return;
+            }
+            
+            if (!code || code.length !== 4) {
+                alert('Bitte geben Sie einen 4-stelligen Code ein!');
+                return;
+            }
+            
+            if (appData.users.some(user => user.code === code && (!appData.editingUser || user.id !== appData.editingUser.id))) {
+                alert('Dieser Code ist bereits vergeben!');
+                return;
+            }
+            
+            if (appData.editingUser) {
+                appData.editingUser.isSupervisor = isSupervisor;                appData.editingUser.name = name;
+                appData.editingUser.code = code;
+                appData.editingUser.isAdmin = isAdmin;
+                alert('Mitarbeiter erfolgreich aktualisiert!');
+            } else {
+                const newId = Math.max(...appData.users.map(u => u.id)) + 1;
+                appData.users.push({ id: newId, name, code, isAdmin }, isSupervisor);
+                alert('Mitarbeiter erfolgreich hinzugefügt!');
+            }
+            
+            saveToLocalStorage();
+            renderUsers();
+            closeAddUserModal();
+        }
+
+        function deleteUser(userId) {
+            const user = appData.users.find(u => u.id === userId);
+            if (!user) return;
+            
+            const adminCount = appData.users.filter(u => u.isAdmin).length;
+            if (user.isAdmin && adminCount === 1) {
+                alert('Der letzte Administrator kann nicht gelöscht werden!');
+                return;
+            }
+            
+            if (user.id === appData.currentUser.id) {
+                alert('Sie können sich nicht selbst löschen!');
+                return;
+            }
+            
+            if (confirm(`Mitarbeiter "${user.name}" wirklich löschen?`)) {
+                appData.users = appData.users.filter(u => u.id !== userId);
+                saveToLocalStorage();
+                renderUsers();
+            }
+        }
+
+        // Email Management
+        function editEmail() {
+            document.getElementById('emailDisplay').classList.add('hidden');
+            document.getElementById('emailEdit').classList.remove('hidden');
+            document.getElementById('emailInput').value = appData.adminEmail;
+            document.getElementById('emailInput').focus();
+        }
+
+        function saveEmail() {
+            const email = document.getElementById('emailInput').value.trim();
+            
+            if (!email) {
+                alert('Bitte geben Sie eine E-Mail-Adresse ein!');
+                return;
+            }
+            
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Bitte geben Sie eine gültige E-Mail-Adresse ein!');
+                return;
+            }
+            
+            appData.adminEmail = email;
+            document.getElementById('emailValue').textContent = email;
+            cancelEmailEdit();
+            saveToLocalStorage();
+            alert('E-Mail-Adresse erfolgreich gespeichert!');
+        }
+
+        function cancelEmailEdit() {
+            document.getElementById('emailDisplay').classList.remove('hidden');
+            document.getElementById('emailEdit').classList.add('hidden');
+        }
+
+        // Task Management Functions
+        function renderAdminTasks() {
+            const container = document.getElementById('adminTaskList');
+            let html = '';
+            
+            ['daily', 'weekly', 'monthly'].forEach(category => {
+                const categoryName = category === 'daily' ? 'Tägliche' : category === 'weekly' ? 'Wöchentliche' : 'Monatliche';
+                
+                // Sort tasks by order property (if not set, use index)
+                const sortedTasks = [...appData.tasks[category]].sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : 999;
+                    const orderB = b.order !== undefined ? b.order : 999;
+                    return orderA - orderB;
+                });
+                
+                html += `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 10px;">
+                            ${categoryName} Aufgaben
+                            <span style="font-size: 12px; color: #666; background: #f0f0f0; padding: 4px 8px; border-radius: 12px;">
+                                Reihenfolge: ↑↓ Buttons verwenden
+                            </span>
+                        </h3>
+                        <div style="display: grid; gap: 15px;">
+                            ${sortedTasks.map((task, index) => `
+                                <div class="task-card" style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                                        <button onclick="moveTaskUp('${category}', '${task.id}')" 
+                                                style="background: rgba(102, 126, 234, 0.1); border: none; border-radius: 8px; padding: 8px; cursor: pointer; color: #667eea; font-size: 16px; min-width: 36px; min-height: 36px;"
+                                                ${index === 0 ? 'disabled style="opacity: 0.3;"' : ''}
+                                                title="Nach oben verschieben">↑</button>
+                                        <button onclick="moveTaskDown('${category}', '${task.id}')" 
+                                                style="background: rgba(102, 126, 234, 0.1); border: none; border-radius: 8px; padding: 8px; cursor: pointer; color: #667eea; font-size: 16px; min-width: 36px; min-height: 36px;"
+                                                ${index === sortedTasks.length - 1 ? 'disabled style="opacity: 0.3;"' : ''}
+                                                title="Nach unten verschieben">↓</button>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div class="task-icons">
+                                            <span style="background: #f0f0f0; color: #666; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                                #${index + 1}
+                                            </span>
+                                            <button onclick="deleteTask('${category}', '${task.id}')" style="background: none; border: none; color: #e53e3e; cursor: pointer;">✗</button>
+                                            <button onclick="editTask('${category}', '${task.id}')" style="background: none; border: none; color: #667eea; cursor: pointer;">✏️</button>
+                                        </div>
+                                        <div class="task-title">${task.title}</div>
+                                        ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                                        <div class="task-meta">
+                                            ${task.special === 'temperature' ? '🌡️ Temperaturmessung' : ''}
+                                            ${task.fifo ? '⚠️ FIFO-Warnung' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function showAddTaskDialog() {
+            appData.editingTask = null;
+            document.getElementById('taskModalTitle').textContent = 'Neue Aufgabe erstellen';
+            document.getElementById('saveTaskBtn').textContent = 'Erstellen';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('taskCategory').value = 'daily';
+            document.getElementById('taskSpecial').value = '';
+            document.getElementById('taskFifo').checked = false;
+            document.getElementById('addTaskModal').classList.remove('hidden');
+        }
+
+        function editTask(category, taskId) {
+            const task = appData.tasks[category].find(t => t.id === taskId);
+            if (task) {
+                appData.editingTask = { ...task, category };
+                document.getElementById('taskModalTitle').textContent = 'Aufgabe bearbeiten';
+                document.getElementById('saveTaskBtn').textContent = 'Aktualisieren';
+                document.getElementById('taskTitle').value = task.title;
+                document.getElementById('taskDescription').value = task.description || '';
+                document.getElementById('taskCategory').value = category;
+                document.getElementById('taskSpecial').value = task.special || '';
+                document.getElementById('taskFifo').checked = task.fifo || false;
+                document.getElementById('addTaskModal').classList.remove('hidden');
+            }
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById('addTaskModal').classList.add('hidden');
+            appData.editingTask = null;
+        }
+
+        function saveTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const description = document.getElementById('taskDescription').value.trim();
+            const category = document.getElementById('taskCategory').value;
+            const special = document.getElementById('taskSpecial').value;
+            const fifo = document.getElementById('taskFifo').checked;
+            
+            if (!title) {
+                alert('Bitte geben Sie einen Titel ein!');
+                return;
+            }
+            
+            if (appData.editingTask) {
+                if (appData.editingTask.category !== category) {
+                    appData.tasks[appData.editingTask.category] = appData.tasks[appData.editingTask.category].filter(t => t.id !== appData.editingTask.id);
+                    
+                    // When moving to different category, add at end
+                    const maxOrder = Math.max(...appData.tasks[category].map(t => t.order !== undefined ? t.order : 0), -1);
+                    appData.editingTask.order = maxOrder + 1;
+                }
+                
+                const task = appData.tasks[category].find(t => t.id === appData.editingTask.id) || appData.editingTask;
+                task.title = title;
+                task.description = description;
+                task.special = special || undefined;
+                task.fifo = fifo || undefined;
+                
+                if (appData.editingTask.category !== category) {
+                    delete task.category;
+                    appData.tasks[category].push(task);
+                    // Reorder tasks in old category
+                    reorderTasks(appData.editingTask.category);
+                }
+                
+                alert('Aufgabe erfolgreich aktualisiert!');
+            } else {
+                const newId = `custom_${Date.now()}`;
+                
+                // Calculate next order position (add at end)
+                const maxOrder = Math.max(...appData.tasks[category].map(t => t.order !== undefined ? t.order : 0), -1);
+                
+                const newTask = {
+                    id: newId,
+                    title,
+                    description,
+                    completed: false,
+                    completedBy: null,
+                    completedAt: null,
+                    order: maxOrder + 1,
+                    ...(special && { special }),
+                    ...(fifo && { fifo })
+                };
+                
+                appData.tasks[category].push(newTask);
+                alert('Aufgabe erfolgreich hinzugefügt!');
+            }
+            
+            saveToLocalStorage();
+            renderAdminTasks();
+            closeAddTaskModal();
+        }
+
+        function deleteTask(category, taskId) {
+            if (confirm('Aufgabe wirklich löschen?')) {
+                appData.tasks[category] = appData.tasks[category].filter(t => t.id !== taskId);
+                
+                // Reorder remaining tasks to close gaps
+                reorderTasks(category);
+                
+                saveToLocalStorage();
+                renderAdminTasks();
+            }
+        }
+
+        // Task Ordering Functions
+        function moveTaskUp(category, taskId) {
+            const tasks = appData.tasks[category];
+            const sortedTasks = [...tasks].sort((a, b) => {
+                const orderA = a.order !== undefined ? a.order : 999;
+                const orderB = b.order !== undefined ? b.order : 999;
+                return orderA - orderB;
+            });
+            
+            const currentIndex = sortedTasks.findIndex(t => t.id === taskId);
+            if (currentIndex <= 0) return; // Already at top
+            
+            // Swap order values
+            const currentTask = sortedTasks[currentIndex];
+            const previousTask = sortedTasks[currentIndex - 1];
+            
+            const tempOrder = currentTask.order !== undefined ? currentTask.order : currentIndex;
+            currentTask.order = previousTask.order !== undefined ? previousTask.order : currentIndex - 1;
+            previousTask.order = tempOrder;
+            
+            saveToLocalStorage();
+            renderAdminTasks();
+        }
+
+        function moveTaskDown(category, taskId) {
+            const tasks = appData.tasks[category];
+            const sortedTasks = [...tasks].sort((a, b) => {
+                const orderA = a.order !== undefined ? a.order : 999;
+                const orderB = b.order !== undefined ? b.order : 999;
+                return orderA - orderB;
+            });
+            
+            const currentIndex = sortedTasks.findIndex(t => t.id === taskId);
+            if (currentIndex >= sortedTasks.length - 1) return; // Already at bottom
+            
+            // Swap order values
+            const currentTask = sortedTasks[currentIndex];
+            const nextTask = sortedTasks[currentIndex + 1];
+            
+            const tempOrder = currentTask.order !== undefined ? currentTask.order : currentIndex;
+            currentTask.order = nextTask.order !== undefined ? nextTask.order : currentIndex + 1;
+            nextTask.order = tempOrder;
+            
+            saveToLocalStorage();
+            renderAdminTasks();
+        }
+
+        function reorderTasks(category) {
+            // Reset order for all tasks in category
+            const tasks = appData.tasks[category];
+            const sortedTasks = [...tasks].sort((a, b) => {
+                const orderA = a.order !== undefined ? a.order : 999;
+                const orderB = b.order !== undefined ? b.order : 999;
+                return orderA - orderB;
+            });
+            
+            sortedTasks.forEach((task, index) => {
+                task.order = index;
+            });
+        }
+
+        // Device Management Functions
+        function renderDevices() {
+            const container = document.getElementById('deviceList');
+            container.innerHTML = appData.temperatureDevices.map(device => `
+                <div class="task-card">
+                    <div class="task-icons">
+                        <button onclick="deleteDevice('${device.id}')" style="background: none; border: none; color: #e53e3e; cursor: pointer;" title="Gerät löschen">✗</button>
+                        <button onclick="editDevice('${device.id}')" style="background: none; border: none; color: #667eea; cursor: pointer;" title="Gerät bearbeiten">✏️</button>
+                    </div>
+                    <div class="task-title">🌡️ ${device.name}</div>
+                    <div class="task-description">
+                        Temperaturbereich: ${device.minTemp}°C bis ${device.maxTemp}°C
+                    </div>
+                    <div class="task-meta">
+                        ID: ${device.id} | 
+                        ${device.minTemp < 0 ? 'Tiefkühlgerät' : 'Kühlgerät'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddDeviceDialog() {
+            appData.editingDevice = null;
+            document.getElementById('deviceModalTitle').textContent = 'Neues Temperaturgerät erstellen';
+            document.getElementById('saveDeviceBtn').textContent = 'Erstellen';
+            document.getElementById('deviceName').value = '';
+            document.getElementById('deviceMinTemp').value = '';
+            document.getElementById('deviceMaxTemp').value = '';
+            document.getElementById('addDeviceModal').classList.remove('hidden');
+        }
+
+        function editDevice(deviceId) {
+            const device = appData.temperatureDevices.find(d => d.id === deviceId);
+            if (device) {
+                appData.editingDevice = device;
+                document.getElementById('deviceModalTitle').textContent = 'Temperaturgerät bearbeiten';
+                document.getElementById('saveDeviceBtn').textContent = 'Aktualisieren';
+                document.getElementById('deviceName').value = device.name;
+                document.getElementById('deviceMinTemp').value = device.minTemp;
+                document.getElementById('deviceMaxTemp').value = device.maxTemp;
+                document.getElementById('addDeviceModal').classList.remove('hidden');
+            }
+        }
+
+        function closeAddDeviceModal() {
+            document.getElementById('addDeviceModal').classList.add('hidden');
+            appData.editingDevice = null;
+        }
+
+        function saveDevice() {
+            const name = document.getElementById('deviceName').value.trim();
+            const minTemp = parseInt(document.getElementById('deviceMinTemp').value);
+            const maxTemp = parseInt(document.getElementById('deviceMaxTemp').value);
+            
+            if (!name) {
+                alert('Bitte geben Sie einen Gerätenamen ein!');
+                return;
+            }
+            
+            if (isNaN(minTemp) || isNaN(maxTemp)) {
+                alert('Bitte geben Sie gültige Temperaturen ein!');
+                return;
+            }
+            
+            if (minTemp >= maxTemp) {
+                alert('Die Mindesttemperatur muss niedriger als die Höchsttemperatur sein!');
+                return;
+            }
+            
+            if (appData.temperatureDevices.some(device => 
+                device.name === name && (!appData.editingDevice || device.id !== appData.editingDevice.id)
+            )) {
+                alert('Ein Gerät mit diesem Namen existiert bereits!');
+                return;
+            }
+            
+            if (appData.editingDevice) {
+                // Update existing device
+                appData.editingDevice.name = name;
+                appData.editingDevice.minTemp = minTemp;
+                appData.editingDevice.maxTemp = maxTemp;
+                alert('Temperaturgerät erfolgreich aktualisiert!');
+            } else {
+                // Create new device
+                const newId = `device_${Date.now()}`;
+                const newDevice = {
+                    id: newId,
+                    name,
+                    minTemp,
+                    maxTemp
+                };
+                
+                appData.temperatureDevices.push(newDevice);
+                alert('Temperaturgerät erfolgreich hinzugefügt!');
+            }
+            
+            saveToLocalStorage();
+            renderDevices();
+            closeAddDeviceModal();
+        }
+
+        function deleteDevice(deviceId) {
+            const device = appData.temperatureDevices.find(d => d.id === deviceId);
+            if (!device) return;
+            
+            // Check if device is being used in any completed temperature readings
+            const isUsedInHistory = ['daily', 'weekly', 'monthly'].some(category =>
+                appData.tasks[category].some(task => 
+                    task.temperatureReadings && 
+                    Object.keys(task.temperatureReadings).includes(device.name)
+                )
+            );
+            
+            if (isUsedInHistory) {
+                if (!confirm(`Das Gerät "${device.name}" wird in historischen Temperaturmessungen verwendet. Wirklich löschen? Die historischen Daten bleiben erhalten.`)) {
+                    return;
+                }
+            } else {
+                if (!confirm(`Temperaturgerät "${device.name}" wirklich löschen?`)) {
+                    return;
+                }
+            }
+            
+            appData.temperatureDevices = appData.temperatureDevices.filter(d => d.id !== deviceId);
+            saveToLocalStorage();
+            renderDevices();
+            alert('Temperaturgerät wurde gelöscht.');
+        }
+
+        // Statistics Functions
+        function renderStats() {
+            const container = document.getElementById('statsList');
+            let html = '';
+            
+            appData.users.forEach(user => {
+                const stats = appData.completionStats[user.id] || { daily: 0, weekly: 0, monthly: 0, tasks: {} };
+                const total = stats.daily + stats.weekly + stats.monthly;
+                
+                // User card with detailed task breakdown
+                html += `
+                    <div class="task-card" style="grid-column: 1 / -1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="task-title" style="font-size: 18px;">${user.name}</div>
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600;">
+                                Gesamt: ${total} Aufgaben
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; gap: 10px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                                <div style="background: #e3f2fd; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: 700; color: #1976d2;">${stats.daily}</div>
+                                    <div style="font-size: 12px; color: #666;">Tägliche Aufgaben</div>
+                                </div>
+                                <div style="background: #e8f5e9; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: 700; color: #388e3c;">${stats.weekly}</div>
+                                    <div style="font-size: 12px; color: #666;">Wöchentliche Aufgaben</div>
+                                </div>
+                                <div style="background: #fff3e0; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: 700; color: #f57c00;">${stats.monthly}</div>
+                                    <div style="font-size: 12px; color: #666;">Monatliche Aufgaben</div>
+                                </div>
+                            </div>
+                            
+                            ${Object.keys(stats.tasks || {}).length > 0 ? `
+                                <div style="border-top: 1px solid #e0e0e0; padding-top: 15px;">
+                                    <div style="font-weight: 600; margin-bottom: 10px; color: #666;">Detaillierte Aufgabenübersicht:</div>
+                                    <div style="display: grid; gap: 8px;">
+                                        ${Object.entries(stats.tasks)
+                                            .sort((a, b) => b[1].count - a[1].count)
+                                            .map(([key, task]) => {
+                                                const categoryColors = {
+                                                    daily: '#e3f2fd',
+                                                    weekly: '#e8f5e9',
+                                                    monthly: '#fff3e0'
+                                                };
+                                                const categoryIcons = {
+                                                    daily: '📅',
+                                                    weekly: '📗',
+                                                    monthly: '📕'
+                                                };
+                                                return `
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: ${categoryColors[task.category]}; border-radius: 8px;">
+                                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                                            <span>${categoryIcons[task.category]}</span>
+                                                            <span style="font-size: 14px;">${task.title}</span>
+                                                        </div>
+                                                        <div style="background: white; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 14px;">
+                                                            ${task.count}x
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                    </div>
+                                </div>
+                            ` : '<div style="color: #999; text-align: center; padding: 20px;">Noch keine Aufgaben erledigt</div>'}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || '<div class="task-card" style="text-align: center; color: #999;">Keine Statistiken vorhanden</div>';
+        }
+
+        function resetStats() {
+            if (confirm('Alle Statistiken wirklich zurücksetzen? Dies kann nicht rückgängig gemacht werden!')) {
+                appData.completionStats = {};
+                saveToLocalStorage();
+                renderStats();
+                alert('Statistiken wurden zurückgesetzt.');
+            }
+        }
+
+        // Initialize App
+        function init() {
+            // Try to load from localStorage
+            loadFromLocalStorage();
+            
+            // Initialize order property for existing tasks if not present
+            ['daily', 'weekly', 'monthly'].forEach(category => {
+                appData.tasks[category].forEach((task, index) => {
+                    if (task.order === undefined) {
+                        task.order = index;
+                    }
+                });
+            });
+            
+            // Ensure all temperature devices have unique IDs if missing
+            appData.temperatureDevices.forEach((device, index) => {
+                if (!device.id) {
+                    device.id = `device_${index}_${Date.now()}`;
+                }
+            });
+            
+            document.getElementById('emailValue').textContent = appData.adminEmail;
+            
+            // Add input event listeners
+            document.getElementById('userCode').addEventListener('input', function(e) {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+            });
+            document.getElementById('loginCode').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') login();
+            });
+            
+            document.getElementById('confirmCode').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') executeConfirmTasks();
+            });
+            
+            // Touch optimization
+            if ('ontouchstart' in window) {
+                document.body.classList.add('touch-device');
+            }
+            
+            // Save the updated data with order properties
+            saveToLocalStorage();
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
