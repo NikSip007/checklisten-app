@@ -11,10 +11,10 @@
     <meta name="apple-mobile-web-app-title" content="Checklisten">
     
     <!-- PWA Manifest -->
-   <link rel="manifest" href="/checklisten-app/manifest.json">
+    <link rel="manifest" href="/checklisten-app/manifest.json">
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="/checklisten-app/icon-192.png">
     
     <title>Checklisten App</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -667,7 +667,7 @@
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                navigator.serviceWorker.register('/checklisten-app/sw.js').then(function(registration) {
                     console.log('ServiceWorker registration successful');
                 }, function(err) {
                     console.log('ServiceWorker registration failed: ', err);
@@ -2015,7 +2015,6 @@
             document.getElementById('userCode').addEventListener('input', function(e) {
                 e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
             });
-            
             document.getElementById('loginCode').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') login();
             });
